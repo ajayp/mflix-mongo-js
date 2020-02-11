@@ -2,7 +2,7 @@ let users
 let sessions
 
 export default class UsersDAO {
-  static async injectDB(conn) {
+  static async injectDB (conn) {
     if (users && sessions) {
       return
     }
@@ -36,10 +36,10 @@ export default class UsersDAO {
    * @param {string} email - The email of the desired user
    * @returns {Object | null} Returns either a single user or nothing
    */
-  static async getUser(email) {
+  static async getUser (email) {
     // TODO Ticket: User Management
     // Retrieve the user document corresponding with the user's email.
-    return await users.findOne({ someField: "someValue" })
+    return await users.findOne({ "email": email })
   }
 
   /**
@@ -47,7 +47,7 @@ export default class UsersDAO {
    * @param {UserInfo} userInfo - The information of the user to add
    * @returns {DAOResponse} Returns either a "success" or an "error" Object
    */
-  static async addUser(userInfo) {
+  static async addUser (userInfo) {
     /**
     Ticket: Durable Writes
 
@@ -60,7 +60,13 @@ export default class UsersDAO {
       // Insert a user with the "name", "email", and "password" fields.
       // TODO Ticket: Durable Writes
       // Use a more durable Write Concern for this operation.
-      await users.insertOne({ someField: "someValue" })
+      const { name, email, password } = userInfo;
+
+      await users.insertOne({
+        "name": name,
+        "email": email,
+        "password": password
+      }, { upsert: true })
       return { success: true }
     } catch (e) {
       if (String(e).startsWith("MongoError: E11000 duplicate key error")) {
@@ -77,14 +83,16 @@ export default class UsersDAO {
    * @param {string} jwt - A JSON web token representing the user's claims
    * @returns {DAOResponse} Returns either a "success" or an "error" Object
    */
-  static async loginUser(email, jwt) {
+  static async loginUser (email, jwt) {
     try {
       // TODO Ticket: User Management
       // Use an UPSERT statement to update the "jwt" field in the document,
       // matching the "user_id" field with the email passed to this function.
-      await sessions.updateOne(
-        { someField: "someValue" },
-        { $set: { someOtherField: "someOtherValue" } },
+      await sessions.updateOne({
+        "user_id": email
+      },
+        { $set: { "jwt": jwt } },
+        { "upsert": true }
       )
       return { success: true }
     } catch (e) {
@@ -98,11 +106,11 @@ export default class UsersDAO {
    * @param {string} email - The email of the user to logout
    * @returns {DAOResponse} Returns either a "success" or an "error" Object
    */
-  static async logoutUser(email) {
+  static async logoutUser (email) {
     try {
       // TODO Ticket: User Management
       // Delete the document in the `sessions` collection matching the email.
-      await sessions.deleteOne({ someField: "someValue" })
+      await sessions.deleteOne({ "user_id": email })
       return { success: true }
     } catch (e) {
       console.error(`Error occurred while logging out user, ${e}`)
@@ -116,11 +124,11 @@ export default class UsersDAO {
    * @returns {Object | null} Returns a user session Object, an "error" Object
    * if something went wrong, or null if user was not found.
    */
-  static async getUserSession(email) {
+  static async getUserSession (email) {
     try {
       // TODO Ticket: User Management
       // Retrieve the session document corresponding with the user's email.
-      return sessions.findOne({ someField: "someValue" })
+      return sessions.findOne({ user_id: email })
     } catch (e) {
       console.error(`Error occurred while retrieving user session, ${e}`)
       return null
@@ -132,7 +140,7 @@ export default class UsersDAO {
    * @param {string} email - The email of the user to delete
    * @returns {DAOResponse} Returns either a "success" or an "error" Object
    */
-  static async deleteUser(email) {
+  static async deleteUser (email) {
     try {
       await users.deleteOne({ email })
       await sessions.deleteOne({ user_id: email })
@@ -154,8 +162,8 @@ export default class UsersDAO {
    * @param {string} email - The email of the user to update.
    * @param {Object} preferences - The preferences to include in the user's data.
    * @returns {DAOResponse}
-   */
-  static async updatePreferences(email, preferences) {
+  //  */
+  static async updatePreferences (email, preferences) {
     try {
       /**
       Ticket: User Preferences
@@ -167,25 +175,25 @@ export default class UsersDAO {
       preferences = preferences || {}
 
       // TODO Ticket: User Preferences
-      // Use the data in "preferences" to update the user's preferences.
-      const updateResponse = await users.updateOne(
-        { someField: someValue },
-        { $set: { someOtherField: someOtherValue } },
-      )
 
+      const updateResponse = await users.updateOne(
+        { email },
+        { $set: { preferences } },
+      )
       if (updateResponse.matchedCount === 0) {
         return { error: "No user found with that email" }
       }
       return updateResponse
     } catch (e) {
-      console.error(
-        `An error occurred while updating this user's preferences, ${e}`,
-      )
-      return { error: e }
+      return {
+        error: "An error occurred while updating this user's preferences.",
+      }
     }
   }
 
-  static async checkAdmin(email) {
+
+
+  static async checkAdmin (email) {
     try {
       const { isAdmin } = await this.getUser(email)
       return isAdmin || false
@@ -194,7 +202,7 @@ export default class UsersDAO {
     }
   }
 
-  static async makeAdmin(email) {
+  static async makeAdmin (email) {
     try {
       const updateResponse = users.updateOne(
         { email },
