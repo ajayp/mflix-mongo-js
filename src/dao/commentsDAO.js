@@ -3,7 +3,7 @@ import { ObjectId } from "bson"
 let comments
 
 export default class CommentsDAO {
-  static async injectDB(conn) {
+  static async injectDB (conn) {
     if (comments) {
       return
     }
@@ -41,11 +41,18 @@ export default class CommentsDAO {
    * @param {string} date - The date on which the comment was posted.
    * @returns {DAOResponse} Returns an object with either DB response or "error"
    */
-  static async addComment(movieId, user, comment, date) {
+  static async addComment (movieId, user, comment, date) {
     try {
       // TODO Ticket: Create/Update Comments
       // Construct the comment document to be inserted into MongoDB.
-      const commentDoc = { someField: "someValue" }
+      const commentDoc =
+      {
+        "movie_id": ObjectId(movieId),
+        "text": comment,
+        "email": user.email,
+        "name": user.name,
+        "date": date
+      }
 
       return await comments.insertOne(commentDoc)
     } catch (e) {
@@ -64,14 +71,17 @@ export default class CommentsDAO {
    * @param {string} date - The date on which the comment was updated.
    * @returns {DAOResponse} Returns an object with either DB response or "error"
    */
-  static async updateComment(commentId, userEmail, text, date) {
+  static async updateComment (commentId, userEmail, text, date) {
     try {
       // TODO Ticket: Create/Update Comments
       // Use the commentId and userEmail to select the proper comment, then
       // update the "text" and "date" fields of the selected comment.
       const updateResponse = await comments.updateOne(
-        { someField: "someValue" },
-        { $set: { someOtherField: "someOtherValue" } },
+        {
+          _id: commentId,
+          email: userEmail
+        },
+        { $set: { text: text, date: date } }
       )
 
       return updateResponse
@@ -81,7 +91,7 @@ export default class CommentsDAO {
     }
   }
 
-  static async deleteComment(commentId, userEmail) {
+  static async deleteComment (commentId, userEmail) {
     /**
     Ticket: Delete Comments
 
@@ -96,6 +106,7 @@ export default class CommentsDAO {
       // Use the userEmail and commentId to delete the proper comment.
       const deleteResponse = await comments.deleteOne({
         _id: ObjectId(commentId),
+        email: userEmail
       })
 
       return deleteResponse
@@ -105,7 +116,7 @@ export default class CommentsDAO {
     }
   }
 
-  static async mostActiveCommenters() {
+  static async mostActiveCommenters () {
     /**
     Ticket: User Report
 
